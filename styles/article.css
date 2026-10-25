@@ -1,0 +1,19 @@
+/* Long-form article typography */
+@layer components {
+  .article { font-family: var(--body); @apply text-[1.2rem] leading-[1.8]; }
+  .article p { @apply mb-6; }
+  .article h2 { font-family: var(--display); @apply mb-4 mt-10 scroll-mt-24 text-[1.75rem] font-extrabold leading-tight; }
+  .article h3 { font-family: var(--display); @apply mb-3 mt-8 text-[1.3rem] font-bold; }
+  .article ul { @apply mb-6 list-disc pl-6; }
+  .article ol { @apply mb-6 list-decimal pl-6; }
+  .article li { @apply my-1.5; }
+  .article li::marker { @apply text-tang; }
+  .article a { @apply text-teal underline decoration-aqua/50 underline-offset-4 transition hover:decoration-tang; }
+  .article blockquote { @apply my-8 rounded-r-2xl border-l-4 border-tang bg-white px-5 py-4 text-[1.05rem] shadow-card; }
+  .article img { @apply my-6 h-auto max-w-full rounded-2xl shadow-card; }
+  .article hr { @apply my-10 border-0 border-t-2 border-mist; }
+  .article table { @apply mb-6 w-full border-collapse text-base; }
+  .article th, .article td { @apply border border-mist px-3 py-2 text-left; }
+  .article th { @apply bg-white; }
+  .article strong { @apply font-bold; }
+}

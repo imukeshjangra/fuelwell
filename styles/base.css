@@ -1,0 +1,24 @@
+@layer base {
+  html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
+  body {
+    @apply bg-ground font-display text-ink antialiased;
+    background-image:
+      radial-gradient(60rem 40rem at 100% -10%, rgba(255,122,26,.10), transparent 60%),
+      radial-gradient(50rem 40rem at -10% 20%, rgba(20,200,180,.10), transparent 60%),
+      radial-gradient(40rem 30rem at 60% 110%, rgba(124,92,255,.08), transparent 60%);
+    background-attachment: fixed;
+  }
+  ::selection { background: #ff7a1a; color: #0f1b2d; }
+  :focus-visible { outline: 3px solid #14c8b4; outline-offset: 3px; border-radius: 6px; }
+  summary::-webkit-details-marker { display: none; }
+  [lang='hi'] { font-family: var(--hindi), var(--display), system-ui, sans-serif; }
+
+  input, select, textarea { @apply transition duration-200 ease-out; }
+  input:focus, select:focus, textarea:focus { @apply border-aqua outline-none ring-4 ring-aqua/20; }
+
+  /* slim, branded scrollbars */
+  * { scrollbar-width: thin; scrollbar-color: #b8c6d8 transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #c3d0e0; border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: #ff7a1a; background-clip: content-box; border: 3px solid transparent; }
+}

@@ -1,0 +1,6 @@
+@media print {
+  .no-print, header, footer, .aurora { display: none !important; }
+  body { background: #fff !important; }
+  main { padding: 0 !important; }
+  * { box-shadow: none !important; }
+}
