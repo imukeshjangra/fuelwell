@@ -8,10 +8,10 @@ db.exec(`create table if not exists users(id integer primary key autoincrement, 
 create table if not exists health_logs(user_id integer, day text, weight real, water integer, steps integer, workout integer, sleep real, primary key(user_id, day));
 create table if not exists user_challenges(user_id integer, cid text, start text, done integer default 0, primary key(user_id, cid));
 create table if not exists checkins(user_id integer, cid text, day text, primary key(user_id, cid, day));
-create table if not exists password_resets(token_hash text primary key, user_id integer not null references users(id) on delete cascade, expires_at integer not null);
-create index if not exists idx_password_resets_user on password_resets(user_id);
 create table if not exists submissions(id integer primary key autoincrement, user_id integer, title text, excerpt text, category text, cover text default '', tags text default '', body text, status text default 'pending', note text default '', slug text default '', created text default (datetime('now')), updated text default (datetime('now')));
-create index if not exists idx_sub_status on submissions(status);`);
+create index if not exists idx_sub_status on submissions(status);
+create table if not exists pw_resets(token_hash text primary key, user_id integer not null, expires integer not null, used integer default 0);`);
+try { db.exec('alter table users add column pw_changed integer default 0'); } catch {}
 
 // ---------- accounts and sessions ----------
 export type Member = { id: number; name: string; email: string; created: string; sex: string; age: number; height_cm: number; goal: string; goal_kg: number };
@@ -40,27 +40,21 @@ export function memberIdFromToken(t?: string | null) {
 }
 const COLS = 'id,name,email,created,sex,age,height_cm,goal,goal_kg';
 export const getMember = (): Member | null => {
-  const id = memberIdFromToken(cookies().get(MEMBER_COOKIE)?.value);
-  return id ? ((db.prepare(`select ${COLS} from users where id=?`).get(id) as Member | undefined) ?? null) : null;
+  const tok = cookies().get(MEMBER_COOKIE)?.value;
+  const id = memberIdFromToken(tok);
+  if (!id) return null;
+  const u = db.prepare(`select ${COLS}, pw_changed from users where id=?`).get(id) as (Member & { pw_changed: number }) | undefined;
+  if (!u) return null;
+  const issued = Number(tok!.split('.')[1]) - MEMBER_SECONDS; // sessions made before a password change stop working
+  if (issued < (u.pw_changed || 0)) return null;
+  const { pw_changed: _omit, ...member } = u; void _omit;
+  return member;
 };
 /** For pages that need a signed-in member. Pages render in parallel with their layout, so each page must redirect on its own. */
 export function requireMember(): Member { const m = getMember(); if (!m) redirect('/login'); return m; }
 export const memberByEmail = (email: string) => db.prepare('select * from users where email=?').get(email) as (Member & { pass: string }) | undefined;
 export const createMember = (name: string, email: string, password: string) =>
   Number(db.prepare('insert into users(name,email,pass) values(?,?,?)').run(name, email, hashPassword(password)).lastInsertRowid);
-const resetTokenHash = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
-export const createPasswordReset = (userId: number, token: string, expiresAt: number) => db.transaction(() => {
-  db.prepare('delete from password_resets where user_id=?').run(userId);
-  db.prepare('insert into password_resets(token_hash,user_id,expires_at) values(?,?,?)').run(resetTokenHash(token), userId, expiresAt);
-})();
-export const deletePasswordReset = (token: string) => db.prepare('delete from password_resets where token_hash=?').run(resetTokenHash(token));
-export const resetPassword = (token: string, password: string) => db.transaction(() => {
-  const reset = db.prepare('select user_id from password_resets where token_hash=? and expires_at>?').get(resetTokenHash(token), Date.now()) as { user_id: number } | undefined;
-  if (!reset) return false;
-  db.prepare('update users set pass=? where id=?').run(hashPassword(password), reset.user_id);
-  db.prepare('delete from password_resets where user_id=?').run(reset.user_id);
-  return true;
-})();
 export const updateProfile = (id: number, p: { sex: string; age: number; height_cm: number; goal: string; goal_kg: number }) =>
   db.prepare('update users set sex=?, age=?, height_cm=?, goal=?, goal_kg=? where id=?').run(p.sex, p.age, p.height_cm, p.goal, p.goal_kg, id);
 export const memberCount = () => (db.prepare('select count(*) c from users').get() as { c: number }).c;
@@ -160,3 +154,27 @@ export function approveSubmission(id: number) {
 }
 export const rejectSubmission = (id: number, note: string) => { db.prepare("update submissions set status='rejected', note=?, updated=datetime('now') where id=? and status!='approved'").run(note.slice(0, 500), id); logActivity('member-post-rejected', String(id)); };
 export const removeSubmission = (id: number) => db.prepare('delete from submissions where id=?').run(id);
+
+// ---------- password reset ----------
+const RESET_MINUTES = 60;
+const sha = (t: string) => crypto.createHash('sha256').update(t).digest('hex');
+/** Creates a one-time reset token (only its hash is stored). Older unused tokens for the user are removed. */
+export function createReset(userId: number) {
+  const token = crypto.randomBytes(32).toString('hex'); const now = Math.floor(Date.now() / 1000);
+  db.prepare('delete from pw_resets where user_id=? or expires<?').run(userId, now);
+  db.prepare('insert into pw_resets(token_hash,user_id,expires) values(?,?,?)').run(sha(token), userId, now + RESET_MINUTES * 60);
+  return token;
+}
+export const resetValid = (token: string) => /^[a-f0-9]{64}$/.test(token) && !!db.prepare('select 1 from pw_resets where token_hash=? and used=0 and expires>?').get(sha(token), Math.floor(Date.now() / 1000));
+/** Sets a new password if the token is valid, then burns the token. Returns the user id or 0. */
+export function useReset(token: string, newPassword: string) {
+  if (!/^[a-f0-9]{64}$/.test(token)) return 0;
+  const now = Math.floor(Date.now() / 1000);
+  return db.transaction(() => {
+    const r = db.prepare('select user_id from pw_resets where token_hash=? and used=0 and expires>?').get(sha(token), now) as { user_id: number } | undefined;
+    if (!r) return 0;
+    db.prepare('update users set pass=?, pw_changed=? where id=?').run(hashPassword(newPassword), now, r.user_id);
+    db.prepare('delete from pw_resets where user_id=?').run(r.user_id);
+    return r.user_id;
+  })();
+}

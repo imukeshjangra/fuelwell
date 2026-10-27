@@ -1,7 +1,21 @@
-node_modules
-.next
-.env.local
-fuelwell.db*
-uploads
+# dependencies and build output
+node_modules/
+.next/
+out/
 *.tsbuildinfo
+next-env.d.ts
+
+# secrets and live data: never commit these
+.env
+.env.*
+!.env.example
+fuelwell.db
+fuelwell.db-*
+*.db
+uploads/
+backups/
+
+# misc
 .DS_Store
+npm-debug.log*
+*.log

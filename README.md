@@ -88,4 +88,13 @@ If you upload images larger than 5 MB, set `client_max_body_size 10m;` in the ng
 - `/challenges` and `/diet-plan` are public SEO landing pages with FAQ structured data and are in the sitemap.
 - Set `AUTH_SECRET` in `.env.local` (any long random text) so member sessions use their own secret.
 - Back up `fuelwell.db` regularly: it now also holds member accounts and health logs.
-# fuelwell
+
+## Forgot password
+- `/forgot-password` emails a one-time link to `/reset-password?token=...` (valid 1 hour, works once; only a hash of the token is stored).
+- The same reply is shown whether or not the email has an account. Limits: 5 requests per hour per network, 3 per email.
+- After a reset, every older login session for that account stops working.
+- Needs the SMTP settings in `.env.local` (same ones used for the welcome email) and `NEXT_PUBLIC_SITE_URL=https://kharedly.in` so the link points to your site.
+
+## Auto deploy (GitHub to VPS)
+Push to the `main` branch and GitHub Actions runs `deploy.sh` on the server (pull, `npm ci`, build, `pm2 restart`).
+Repository secrets needed: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`. Never commit `.env.local`, `fuelwell.db` or `uploads/` (see `.gitignore`).

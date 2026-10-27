@@ -1,7 +1,5 @@
-import PasswordResetForm from '@/components/member/PasswordResetForm';
-
-export const metadata = { title: 'Reset password', robots: { index: false, follow: false }, referrer: 'no-referrer' as const };
-
-export default function Page({ searchParams }: { searchParams: { token?: string } }) {
-  return <div className="px-5 py-14"><PasswordResetForm token={searchParams.token} /></div>;
-}
+import { redirect } from 'next/navigation';
+import { ForgotForm } from '@/components/member/PasswordForms';
+import { getMember } from '@/lib/members';
+export const metadata = { title: 'Forgot password', robots: { index: false, follow: false } };
+export default function Page() { if (getMember()) redirect('/account'); return <div className="px-5 py-14"><ForgotForm /></div>; }

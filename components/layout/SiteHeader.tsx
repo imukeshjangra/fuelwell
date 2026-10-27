@@ -15,7 +15,7 @@ export default function SiteHeader() {
           <Link href="/protein-calculator" className="font-semibold text-sun transition hover:text-white">Free protein calculator →</Link>
         </div>
       </div>
-      <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-3 2xl:max-w-[1440px]">
+      <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-3">
         <Link href="/" className="group flex shrink-0 items-center gap-2 text-2xl font-extrabold tracking-tight">
           <img src="/fuelwell-icon.svg" alt="" width={36} height={36} className="h-9 w-9 rounded-xl shadow-glow transition duration-500 ease-spring group-hover:rotate-[10deg] group-hover:scale-110" />
           <span>Fuel<span className="text-tang">well</span></span>
@@ -28,10 +28,10 @@ export default function SiteHeader() {
             </Link>
           ))}
         </nav>
-        <form action="/search" role="search" className="ml-auto hidden 2xl:block">
+        <form action="/search" role="search" className="ml-auto hidden md:block">
           <input name="q" aria-label="Search articles" placeholder="Search articles…" className="w-40 rounded-full border border-mist bg-white/80 px-4 py-2 text-sm transition-all duration-300 focus:w-56" />
         </form>
-        <Link href={account.href} className="btn btn-dark hidden shrink-0 whitespace-nowrap !px-4 !py-2 text-sm md:inline-flex">{account.t}</Link>
+        <Link href={account.href} className="btn btn-dark hidden !px-4 !py-2 text-sm md:inline-flex">{account.t}</Link>
         <MobileMenu links={[...links, { href: me ? '/account' : '/register', t: me ? '👤 My account' : 'Join free' }, ...(me ? [] : [{ href: '/login', t: 'Sign in' }])]} />
       </div>
     </header>

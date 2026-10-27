@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Run on the VPS: pulls the latest code from GitHub, rebuilds and restarts the site.
+# Your .env.local, fuelwell.db and uploads/ are git-ignored, so they are never touched.
 set -euo pipefail
 cd /var/www/fuelwell
 git fetch origin main
