@@ -10,6 +10,7 @@ export async function POST(req: Request) {
   if (!EMAIL.test(e) || e.length > 200) return NextResponse.json({ error: 'Enter a valid email address' }, { status: 400 });
   if (limited(req, 'subscribe', 10, 3600_000)) return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 });
   const added = addSubscriber(e);
-  if (added.changes > 0) await sendWelcome(e); // only brand-new subscribers get the email
+  if (added.changes === 0) return NextResponse.json({ ok: true, already: true }); // already on the list: no second welcome email
+  await sendWelcome(e);
   return NextResponse.json({ ok: true });
 }

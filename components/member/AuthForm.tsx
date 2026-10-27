@@ -7,13 +7,14 @@ const input = 'w-full rounded-xl border-2 border-mist bg-white px-4 py-3 text-lg
 export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const router = useRouter();
   const [f, setF] = useState({ name: '', email: '', password: '', website: '' });
-  const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(''); const [exists, setExists] = useState(false); const [busy, setBusy] = useState(false);
   const reg = mode === 'register';
   async function submit(e: React.FormEvent) {
-    e.preventDefault(); setErr(''); setBusy(true);
+    e.preventDefault(); setErr(''); setExists(false); setBusy(true);
     const res = await fetch('/api/members/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: mode, ...f }) });
     const j = await res.json().catch(() => ({}));
     setBusy(false);
+    if (res.status === 409 && j.code === 'exists') return setExists(true);
     if (!res.ok) return setErr(j.error || 'Something went wrong');
     router.push('/account'); router.refresh();
   }
@@ -25,6 +26,13 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       <label className="block"><span className="mb-1 block text-sm font-bold">Email</span><input type="email" className={input} value={f.email} onChange={e => setF({ ...f, email: e.target.value })} autoComplete="email" required /></label>
       <label className="block"><span className="mb-1 flex justify-between text-sm font-bold"><span>Password{reg && ' (8+ characters)'}</span>{!reg && <Link href="/forgot-password" className="font-bold text-teal underline">Forgot password?</Link>}</span><input type="password" className={input} value={f.password} onChange={e => setF({ ...f, password: e.target.value })} autoComplete={reg ? 'new-password' : 'current-password'} required minLength={reg ? 8 : 1} /></label>
       <input aria-hidden tabIndex={-1} autoComplete="off" className="hidden" value={f.website} onChange={e => setF({ ...f, website: e.target.value })} />
+      {exists && (
+        <div role="alert" className="rounded-xl bg-sun/25 p-4 text-sm">
+          <p className="font-bold">You already have an account with this email 👋</p>
+          <p className="mt-1 text-ink/80">There is no need to register again. Sign in, or reset your password if you forgot it.</p>
+          <div className="mt-3 flex flex-wrap gap-2"><Link href="/login" className="btn btn-dark !px-4 !py-2 text-sm">Sign in</Link><Link href="/forgot-password" className="btn btn-ghost !px-4 !py-2 text-sm">Forgot password?</Link></div>
+        </div>
+      )}
       {err && <p role="alert" className="rounded-xl bg-coral/10 p-3 text-sm font-bold text-coral">{err}</p>}
       <button disabled={busy} className="btn btn-primary w-full disabled:opacity-60">{busy ? 'Please wait…' : reg ? 'Create account' : 'Sign in'}</button>
       <p className="text-center text-sm text-ink/70">{reg ? <>Already a member? <Link href="/login" className="font-bold text-teal underline">Sign in</Link></> : <>New here? <Link href="/register" className="font-bold text-teal underline">Create a free account</Link></>}</p>

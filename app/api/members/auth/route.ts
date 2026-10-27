@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     if (name.length < 2 || name.length > 60) return fail('Enter your name (2 to 60 characters)');
     if (!validPw(password)) return fail('Password must be 8 to 100 characters');
     if (limited(req, 'register', 5, 3600_000)) return fail('Too many sign-ups from this network. Try again later.', 429);
-    if (memberByEmail(email)) return fail('An account with this email already exists. Please sign in.', 409);
+    if (memberByEmail(email)) return NextResponse.json({ error: 'This email is already registered.', code: 'exists' }, { status: 409 });
     return session(req, createMember(name, email, password));
   }
   if (action === 'login') {
