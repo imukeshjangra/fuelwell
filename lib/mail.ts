@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { logActivity } from './db';
 
 const site = () => (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
 
@@ -13,21 +14,10 @@ function transport() {
   return tx;
 }
 
-export const mailConfigured = () => !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
-
-export async function sendPasswordReset(to: string, resetUrl: string) {
-  const t = transport();
-  if (!t) throw new Error('SMTP is not configured');
-  const from = process.env.MAIL_FROM || `Fuelwell <${process.env.SMTP_USER}>`;
-  const text = `We received a request to reset your Fuelwell password.\n\nUse this one-time link within 30 minutes:\n${resetUrl}\n\nIf you did not request a reset, you can ignore this email.`;
-  const html = `<!doctype html><html><body style="margin:0;background:#F4F6FA;font-family:Segoe UI,Helvetica,Arial,sans-serif;color:#0B1220"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:18px;overflow:hidden"><tr><td style="background:linear-gradient(135deg,#FFA24A,#E8601A);padding:28px 32px;color:#fff;font-size:26px;font-weight:800">Fuelwell</td></tr><tr><td style="padding:32px"><h1 style="margin:0 0 12px;font-size:24px">Reset your password</h1><p style="font-size:16px;line-height:1.6;color:#334155">Use the button below to choose a new password. This one-time link expires in 30 minutes.</p><a href="${resetUrl}" style="display:inline-block;background:#E8601A;color:#fff;text-decoration:none;font-weight:700;padding:12px 24px;border-radius:999px">Reset password</a><p style="font-size:13px;line-height:1.6;color:#64748B">If you did not request this, you can ignore this email. Your password will not change.</p></td></tr></table></td></tr></table></body></html>`;
-  await t.sendMail({ from, to, subject: 'Reset your Fuelwell password', text, html, replyTo: process.env.MAIL_REPLY_TO || undefined });
-}
-
 /** Sends the welcome email. Never throws: a mail problem must not break subscribing. */
 export async function sendWelcome(to: string) {
   const t = transport();
-  if (!t) { console.warn('[mail] SMTP not configured, welcome email skipped'); return; }
+  if (!t) { console.warn('[mail] SMTP not configured, welcome email skipped'); logActivity('mail-failed', 'welcome: SMTP is not configured in .env.local'); return; }
   const url = site();
   const from = process.env.MAIL_FROM || `Fuelwell <${process.env.SMTP_USER}>`;
   const html = `<!doctype html><html><body style="margin:0;background:#F4F6FA;font-family:Segoe UI,Helvetica,Arial,sans-serif;color:#0B1220">
@@ -52,5 +42,30 @@ export async function sendWelcome(to: string) {
     await t.sendMail({ from, to, subject: 'Welcome to Fuelwell: thanks for subscribing!', text, html, replyTo: process.env.MAIL_REPLY_TO || undefined });
   } catch (err) {
     console.error('[mail] welcome email failed:', (err as Error).message);
+    logActivity('mail-failed', `welcome: ${(err as Error).message}`.slice(0, 200));
   }
+}
+
+/** Sends the password reset link. Never throws. */
+export async function sendReset(to: string, name: string, token: string) {
+  const t = transport();
+  if (!t) { console.warn('[mail] SMTP not configured, reset email skipped'); return; }
+  const link = `${site()}/reset-password?token=${token}`;
+  const from = process.env.MAIL_FROM || `Fuelwell <${process.env.SMTP_USER}>`;
+  const first = name.split(' ')[0].replace(/[<>&"]/g, '');
+  const html = `<!doctype html><html><body style="margin:0;background:#F4F6FA;font-family:Segoe UI,Helvetica,Arial,sans-serif;color:#0B1220">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:28px 12px">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:18px;overflow:hidden">
+<tr><td style="background:linear-gradient(135deg,#FFA24A,#E8601A);padding:28px 32px;color:#fff"><div style="font-size:26px;font-weight:800">Fuel<span style="color:#0B1220">well</span></div></td></tr>
+<tr><td style="padding:32px">
+<h1 style="margin:0 0 12px;font-size:24px">Reset your password</h1>
+<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#334155">Hi ${first}, we received a request to reset your Fuelwell password. Tap the button to choose a new one. This link works once and expires in 1 hour.</p>
+<a href="${link}" style="display:inline-block;background:#E8601A;color:#fff;text-decoration:none;font-weight:700;padding:13px 28px;border-radius:999px">Reset password</a>
+<p style="margin:24px 0 6px;font-size:13px;color:#64748B">Button not working? Copy this link into your browser:</p>
+<p style="margin:0;font-size:13px;word-break:break-all;color:#E8601A">${link}</p>
+<p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#64748B">If you did not ask for this, you can ignore this email. Your password will not change.</p>
+</td></tr></table></td></tr></table></body></html>`;
+  const text = `Hi ${first},\n\nWe received a request to reset your Fuelwell password.\nOpen this link to choose a new one (works once, expires in 1 hour):\n${link}\n\nIf you did not ask for this, ignore this email.`;
+  try { await t.sendMail({ from, to, subject: 'Reset your Fuelwell password', text, html }); }
+  catch (err) { console.error('[mail] reset email failed:', (err as Error).message); logActivity('mail-failed', `reset: ${(err as Error).message}`.slice(0, 200)); }
 }
