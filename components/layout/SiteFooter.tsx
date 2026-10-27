@@ -22,7 +22,7 @@ export default function SiteFooter() {
           <ul className="space-y-2">{[['/blog', 'All articles'], ['/diet-plan', 'Diet plan'], ['/challenges', 'Fitness challenges'], ['/register', 'Join free'], ['/about', 'About'], ['/contact', 'Contact'], ['/privacy', 'Privacy'], ['/terms', 'Terms'], ['/disclaimer', 'Medical disclaimer'], ['/feed.xml', 'RSS feed']].map(([h, t]) => <li key={h}><Link href={h} className="hover:text-tang">{t}</Link></li>)}<li><CookieSettings /></li></ul>
         </div>
       </div>
-      <div className="border-t border-white/10 py-5 text-center text-xs text-white/60">© {new Date().getFullYear()} Fuelwell. Information only, not medical advice.</div>
+      <div className="border-t border-white/10 py-5 text-center text-xs text-white/60">© {new Date().getFullYear()} Fuelwelllll. Information only, not medical advice.</div>
     </footer>
   );
 }
